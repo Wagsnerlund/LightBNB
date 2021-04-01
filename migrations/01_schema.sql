@@ -15,7 +15,7 @@ CREATE TABLE properties (
   cost_per_night INTEGER,
   parking_spaces INTEGER,
   number_of_bathrooms INTEGER,
-  number_of_beds INTEGER,
+  number_of_bedrooms INTEGER,
   country VARCHAR(255),
   street VARCHAR(255),
   city VARCHAR(255),
