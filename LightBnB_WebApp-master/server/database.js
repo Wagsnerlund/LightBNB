@@ -143,20 +143,21 @@ const getAllProperties = function (options, limit = 10) {
 }
 exports.getAllProperties = getAllProperties;
 
-getAllProperties({
-  minimum_price_per_night: 100,
-  maximum_price_per_night: 200
-}, 5);
-
 /**
  * Add a property to the database
  * @param {{}} property An object containing all of the property details.
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function (property) {
-  const propertyId = Object.keys(properties).length + 1;
-  property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
+
+  const { owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, parking_spaces, number_of_bathrooms, number_of_bedrooms, country, street, city, province, post_code, active } = property
+
+  const sql = `
+  INSERT INTO users (title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, parking_spaces, number_of_bathrooms, number_of_bedrooms, country, street, city, province, post_code, active)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+  RETURNING *`;
+
+  return pool.query(sql, [title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, parking_spaces, number_of_bathrooms, number_of_bedrooms, country, street, city, province, post_code, active])
+    .then(res => res.rows);
 }
 exports.addProperty = addProperty;
