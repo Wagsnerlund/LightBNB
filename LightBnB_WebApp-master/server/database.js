@@ -50,18 +50,14 @@ exports.getUserWithId = getUserWithId;
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser = function (user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const { name, email, password } = user;
 
   const sql = `
-  SELECT *
-  FROM users
-  WHERE email = $1
+  INSERT INTO users (name, email, password)
+  VALUES ($1, $2, $3)
   RETURNING *`;
 
-  return pool.query(sql, user)
+  return pool.query(sql, [name, email, password])
     .then(res => res.rows);
 }
 exports.addUser = addUser;
@@ -100,16 +96,57 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit = 10) {
-  const sql = `
-  SELECT *
-  FROM properties
-  LIMIT $1`;
+  let queryParams = [];
+  let first = `WHERE`;
 
-  return pool.query(sql, [limit])
-    .then(res => res.rows);
+  let queryString = `
+  SELECT properties.*, avg(property_reviews.rating) as average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id
+  `;
+
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    queryString += `${first} city LIKE $${queryParams.length} `;
+    first = ` AND`;
+  }
+
+  if (options.owner_id) {
+    queryParams.push(`${options.owner_id}`);
+    queryString += `${first} owner_id = $${queryParams.length}`;
+    first = ` AND`;
+  }
+
+  if (options.minimum_price_per_night && options.maximum_price_per_night) {
+    queryParams.push(`${options.minimum_price_per_night}`);
+    queryParams.push(`${options.maximum_price_per_night}`);
+    queryString += `${first} cost_per_night BETWEEN $${queryParams.length - 1} AND  $${queryParams.length}`;
+    first = ` AND`;
+  }
+
+  if (options.minimum_rating) {
+    queryParams.push(`${options.minimum_rating}`);
+    queryString += `${first} average_rating >= $${queryParams.length}`;
+  }
+
+  queryParams.push(limit);
+  queryString += `
+  GROUP BY properties.id
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.length};
+  `;
+
+  console.log(queryString, queryParams);
+
+  return pool.query(queryString, queryParams)
+  .then(res => res.rows);
 }
 exports.getAllProperties = getAllProperties;
 
+getAllProperties({
+  minimum_price_per_night: 100,
+  maximum_price_per_night: 200
+}, 5);
 
 /**
  * Add a property to the database
